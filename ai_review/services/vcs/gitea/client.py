@@ -74,13 +74,18 @@ class GiteaVCSClient(VCSClientProtocol):
             return []
 
     async def get_inline_comments(self) -> list[ReviewCommentSchema]:
-        comments = await self.get_general_comments()
-        if comments:
-            logger.warning(
-                f"Gitea API does not support inline comments — "
-                f"returning {len(comments)} general comments as fallback inline comments"
+        try:
+            response = await self.http_client.pr.get_review_comments(
+                owner=self.owner,
+                repo=self.repo,
+                pull_number=self.pull_number,
             )
-        return comments
+            logger.info(f"Fetched inline comments for {self.pull_request_ref}")
+
+            return [get_review_comment_from_gitea_comment(comment) for comment in response.root]
+        except Exception as error:
+            logger.exception(f"Failed to fetch inline comments for {self.pull_request_ref}: {error}")
+            return []
 
     async def create_general_comment(self, message: str) -> None:
         try:
@@ -135,6 +140,20 @@ class GiteaVCSClient(VCSClientProtocol):
             logger.info(f"Deleted comment {comment_id} in PR {self.pull_request_ref}")
         except Exception as error:
             logger.exception(f"Failed to delete comment {comment_id} in PR {self.pull_request_ref}: {error}")
+            raise
+
+    async def delete_review(self, review_id: int | str, thread_id: int | str | None = None) -> None:
+        try:
+            logger.info(f"Deleting review {review_id} in PR {self.pull_request_ref}")
+            await self.http_client.pr.delete_review(
+                owner=self.owner,
+                repo=self.repo,
+                pull_number=self.pull_number,
+                comment_id=review_id,
+            )
+            logger.info(f"Deleted review {review_id} in PR {self.pull_request_ref}")
+        except Exception as error:
+            logger.exception(f"Failed to delete review {review_id} in PR {self.pull_request_ref}: {error}")
             raise
 
     async def create_inline_reply(self, thread_id: int | str, message: str) -> None:

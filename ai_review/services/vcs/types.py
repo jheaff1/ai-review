@@ -44,6 +44,7 @@ class ReviewCommentSchema(BaseModel):
     author: UserSchema = Field(default_factory=UserSchema)
     parent_id: str | int | None = None
     thread_id: str | int | None = None
+    comments_count: int
 
 
 class ReviewThreadSchema(BaseModel):
@@ -79,6 +80,9 @@ class VCSClientProtocol(Protocol):
 
     async def delete_comment(self, comment_id: int | str, thread_id: int | str | None = None) -> None:
         """Delete a comment by its ID. For VCS that use threads, thread_id may be used."""
+
+    async def delete_review(self, comment_id: int | str, thread_id: int | str | None = None) -> None:
+        """Delete a review by its ID. For VCS that use threads, thread_id may be used."""
 
     # --- Replies ---
     async def create_inline_reply(self, thread_id: int | str, message: str) -> None:

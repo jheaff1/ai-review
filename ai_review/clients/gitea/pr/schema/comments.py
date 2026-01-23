@@ -15,6 +15,7 @@ class GiteaPRCommentSchema(BaseModel):
     original_position: int | None = None
     original_commit_id: str | None = None
     pull_request_review_id: int | None = None
+    comments_count: int
 
 
 class GiteaGetPRCommentsQuerySchema(BaseModel):

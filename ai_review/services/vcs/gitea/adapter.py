@@ -18,5 +18,6 @@ def get_review_comment_from_gitea_comment(comment: GiteaPRCommentSchema) -> Revi
         file=comment.path,
         line=comment.line,
         author=get_user_from_gitea_user(comment.user),
-        thread_id=comment.id
+        thread_id=comment.id,
+        comments_count=comment.comments_count
     )

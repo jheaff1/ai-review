@@ -13,6 +13,8 @@ from ai_review.services.review.internal.policy.types import ReviewPolicyServiceP
 from ai_review.services.review.runner.types import ReviewRunnerProtocol
 from ai_review.services.vcs.types import ReviewInfoSchema, VCSClientProtocol
 
+import sys
+
 logger = get_logger("INLINE_REVIEW_RUNNER")
 
 
@@ -68,29 +70,31 @@ class InlineReviewRunner(ReviewRunnerProtocol):
     async def run(self) -> None:
         await hook.emit_inline_review_start()
 
-        if not settings.review.delete_existing_ai_comments:
-            if await self.review_comment_gateway.has_existing_inline_comments():
-                logger.info("Skipping inline review: AI inline comments already exist")
-                return
+        # if not settings.review.delete_existing_ai_comments:
+        #     if await self.review_comment_gateway.has_existing_inline_comments():
+        #         logger.info("Skipping inline review: AI inline comments already exist")
+        #         return
 
         review_info = await self.vcs.get_review_info()
         logger.info(f"Starting inline review: {len(review_info.changed_files)} files changed")
 
-        if settings.review.delete_existing_ai_comments:
-            # Fetch existing inline comments and delete AI-tagged ones
-            existing_comments = await self.vcs.get_inline_comments()
-            tag = settings.review.inline_tag
-            for comment in existing_comments:
-                if tag in comment.body:
-                    try:
-                        await self.vcs.delete_comment(comment.id, comment.thread_id)
-                        logger.info(f"Deleted existing AI-tagged inline comment {comment.id}")
-                    except Exception as error:
-                        logger.warning(f"Failed to delete comment {comment.id}: {error}")
+        # Fetch existing inline comments and delete AI-tagged ones
+        existing_comments = await self.vcs.get_inline_comments()
+        tag = settings.review.inline_tag
+        for comment in existing_comments:
+            if comment.body == "Inline review" and comment.comments_count == 0:
+                try:
+                    logger.info(f"deleting empty AI-tagged inline comment {comment.id}")
+                    await self.vcs.delete_review(comment.id, comment.thread_id)
+                    logger.info(f"Deleted empty AI-tagged inline comment {comment.id}")
+                    # sys.exit(1)
+                except Exception as error:
+                    logger.warning(f"Failed to delete comment {comment.id}: {error}")
 
-        changed_files = self.review_policy.apply_for_files(review_info.changed_files)
-        await bounded_gather([
-            self.process_file(changed_file, review_info)
-            for changed_file in changed_files
-        ])
+        # sys.exit(1)
+        # changed_files = self.review_policy.apply_for_files(review_info.changed_files)
+        # await bounded_gather([
+        #     self.process_file(changed_file, review_info)
+        #     for changed_file in changed_files
+        # ])
         await hook.emit_inline_review_complete(self.cost.aggregate())
