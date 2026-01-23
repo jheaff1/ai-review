@@ -35,3 +35,6 @@ class GiteaPullRequestsHTTPClientProtocol(Protocol):
             pull_number: str,
             request: GiteaCreateReviewRequestSchema
     ) -> GiteaCreateReviewResponseSchema: ...
+
+    async def delete_comment(self, owner: str, repo: str, pull_number: str, comment_id: int | str) -> None: ...
+
